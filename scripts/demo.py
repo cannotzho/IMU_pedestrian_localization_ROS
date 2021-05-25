@@ -30,7 +30,7 @@ def signal_handler(sig, frame):
     shutdown = True
     sys.exit(0)
 
-def publish_odom(x, header):
+def publish_odom(x, p, header):
     """ Publish Odometry Message
 
         :param x: State
@@ -54,6 +54,18 @@ def publish_odom(x, header):
         odom.twist.twist.linear.x = vel_x
         odom.twist.twist.linear.y = vel_y
         odom.twist.twist.linear.z = vel_z
+
+        pose_covariance = np.zeros((6,6))
+        pose_covariance[:3, :3] = p[:3, :3]
+        pose_covariance[:3, 3:] = p[:3, 6:]
+        pose_covariance[3:, :3] = p[6:, :3]
+        pose_covariance[3:, 3:] = p[6:, 6:]
+        odom.pose.covariance = pose_covariance.reshape(-1).tolist()
+
+        twist_covariance = np.zeros((6,6))
+        twist_covariance[:3, :3] = p[3:6, 3:6]
+        odom.twist.covariance = twist_covariance.reshape(-1).tolist()
+
         odom_pub.publish(odom)
 
 
@@ -74,7 +86,7 @@ if __name__ == '__main__':
     rospy.init_node('imu_odometry_publisher', anonymous=True)
     odom_pub = rospy.Publisher('imu_odometry', Odometry, queue_size=100)
 
-    localizer = pedestrian_localizer(calibrate_yaw=calibrate_yaw, calibration_steps=calibration_steps, yaw_method=yaw_pub_method, yaw_latch=yaw_pub_latch, callback=publish_odom)
+    localizer = pedestrian_localizer(calibrate_yaw=calibrate_yaw, calibration_distance=calibration_steps, yaw_method=yaw_pub_method, yaw_latch=yaw_pub_latch, callback=publish_odom)
 
     package_path = rospkg.RosPack().get_path('imu_odometry')
     data_dir = os.path.join(package_path, 'data')

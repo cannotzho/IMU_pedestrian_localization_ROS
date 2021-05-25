@@ -65,7 +65,7 @@ def imu_odometry():
 
     calibrate_yaw = rospy.get_param(rospy.get_name()+'/calibrate_yaw', True)
     calibration_distance = rospy.get_param(rospy.get_name()+'/calibration_distance', 2)
-    imu_topic = rospy.get_param(rospy.get_name()+'/imu_topic', "/vectornav/IMU")
+    imu_topic = rospy.get_param(rospy.get_name()+'/imu_topic')
     yaw_pub_method = rospy.get_param(rospy.get_name()+ '/yaw_pub_method', 'Stable')
     yaw_pub_latch = rospy.get_param(rospy.get_name()+ '/yaw_pub_latch', True)
 

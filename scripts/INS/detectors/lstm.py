@@ -1,8 +1,11 @@
-import torch
-import numpy as np
-import rospkg
 import os
 import sys
+
+import numpy as np
+import rospkg, rospy
+import torch
+import gc
+
 
 class LSTM(torch.nn.Module):
     def __init__(self):
@@ -47,51 +50,53 @@ class LSTM(torch.nn.Module):
         self.eval()
 
     def forward(self, x, h=None, mode="train"):
+        #print memory allocation
+        with torch.no_grad():
         # Removing time stamp
-        x = x[-1,1:]
+            x = x[-1,1:]
 
-        batch_size = 1
-        seq_len = 1 #x.shape[0]
-    
-        x = torch.FloatTensor(x).view((batch_size, seq_len, self.input_dim))
+            batch_size = 1
+            seq_len = 1 #x.shape[0]
+        
+            x = torch.FloatTensor(x).view((batch_size, seq_len, self.input_dim))    
 
-        #initalize the hidden output if not already initialized
-        if self.h is None:
-            if h is None:    
-                h_n = x.data.new(self.layers, batch_size, self.hidden_dim).normal_(0, 0.1)
-                h_c = x.data.new(self.layers, batch_size, self.hidden_dim).normal_(0, 0.1)
-                # h_n = h_n.cuda()
-                # h_c = h_c.cuda()
-            else:
-                h_n, h_c = h 
-        else:              
-            h_n, h_c = self.h
+            #initalize the hidden output if not already initialized
+            if self.h is None:
+                if h is None:    
+                    h_n = x.data.new(self.layers, batch_size, self.hidden_dim).normal_(0, 0.1)
+                    h_c = x.data.new(self.layers, batch_size, self.hidden_dim).normal_(0, 0.1)
+                    # h_n = h_n.cuda()
+                    # h_c = h_c.cuda()
+                else:
+                    h_n, h_c = h 
+            else:              
+                h_n, h_c = self.h
 
-        self.lstm.flatten_parameters()
-        
-        # LSTM
-        r_out, (h_n, h_c) = self.lstm(x, (h_n, h_c))   # r_out 
-        
-        # Updating hidden states
-        self.h = (h_n, h_c)
-        
-        # Extracting Last Output
-        lstm_out = r_out.squeeze() #[-1, :]        # Dim: [90]     #r_out[0,:,:]
-        # Fully Connected Layer
-        fc_out = self.fc(lstm_out)              # Dim: [2]
-        # Softmax Layer
-        softmax_out = self.softmax(fc_out)      # Dim: [2]
+            self.lstm.flatten_parameters()
+            
+            # LSTM
+            r_out, (h_n, h_c) = self.lstm(x, (h_n, h_c))   # r_out 
+            
+            # Updating hidden states
+            self.h = (h_n, h_c)
+            
+            # Extracting Last Output
+            lstm_out = r_out.squeeze() #[-1, :]        # Dim: [90]     #r_out[0,:,:]
+            # Fully Connected Layer
+            fc_out = self.fc(lstm_out)              # Dim: [2]
+            # Softmax Layer
+            softmax_out = self.softmax(fc_out)      # Dim: [2]
 
-        # Classify : Class 0: zv=0  Class 1: zv=1
-        prob, zv = torch.max(softmax_out.cpu().data, 0)
-        
-        # Retrieve data from tensors
-        zv = zv.numpy()
-        prob = prob.numpy()
+            # Classify : Class 0: zv=0  Class 1: zv=1
+            prob, zv = torch.max(softmax_out.cpu().data, 0)
+            
+            # Retrieve data from tensors
+            zv = zv.numpy()
+            prob = prob.numpy()
 
-        # Ignoring low confidence estimations
-        # zv[np.where(prob<=0.85)] = 0
-        # if prob <= 0.85:
-            # zv = 0
-        
-        return zv
+            # Ignoring low confidence estimations
+            # zv[np.where(prob<=0.85)] = 0
+            # if prob <= 0.85:
+                # zv = 0
+            
+            return zv
