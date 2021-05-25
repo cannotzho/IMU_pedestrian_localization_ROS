@@ -3,6 +3,10 @@
   <node pkg="imu_odometry" type="main.py" name="imu_odometry_publisher" output="screen">
       <rosparam command="load" file="$(find imu_odometry)/config/parameters.yaml" />
   </node>
+
+  <node pkg="imu_odometry" type="rosbag_record.py" name="rosbag_record" output="screen">
+      <rosparam command="load" file="$(find imu_odometry)/config/record_params.yaml" />
+  </node>
 </launch>
 
 

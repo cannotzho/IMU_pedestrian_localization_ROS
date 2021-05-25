@@ -1,0 +1,2 @@
+record_script: "/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/config/record.bash"
+record_folder: "/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/"

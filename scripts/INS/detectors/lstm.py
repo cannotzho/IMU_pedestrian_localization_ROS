@@ -3,7 +3,7 @@ import sys
 
 import numpy as np
 import rospkg, rospy
-import torch
+from torch import torch
 import gc
 
 
