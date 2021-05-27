@@ -9,7 +9,7 @@ lines = None
 xdata = None
 ydata = None 
 
-def show3Dposition(data):
+def show3Dposition(data, fileName = None):
     """ Display 3D visualization of position data.
         
         :param data: Position data matrix with x,y,z positions as first 3 columns
@@ -56,6 +56,11 @@ def show3Dposition(data):
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
+
+    if (fileName != None):
+        # Save plot to file
+        plt.savefig(fileName+'.png')
+        print ("Visualization plot saved to " + fileName + "_3d.png")
 
     plt.show()
 

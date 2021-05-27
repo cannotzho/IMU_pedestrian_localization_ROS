@@ -22,6 +22,7 @@ from INS.tools.data_visualizer import show3Dposition, show2Dposition, interactiv
 from INS.tools.geometry_utils import rotateOutput
 from INS.tools.geometry_helpers import euler2quat
 import signal
+import rosbag
 
 shutdown = False
 
@@ -89,71 +90,79 @@ if __name__ == '__main__':
     data_dir = os.path.join(package_path, 'results2')
     result_dir = os.path.join(package_path, 'results2')
 
-    for entry in os.scandir(directory):
+    for entry in os.scandir(directory):        
+
         if (entry.path.endswith(".csv")) and (entry.is_file()):
-    
-            fileName = entry.path[len(directory)+1:-4] # CSV file name without extension
+            #Check bag file message count
+            bagName = entry.path[:-4] + ".bag"
+            bagFile = rosbag.Bag(bagName)
+
+            if ((bagFile.get_message_count() < 1000)):
+                os.remove(bagName)
+                os.remove(entry.path)
+            else:
+                fileName = entry.path[len(directory)+1:-4] # CSV file name without extension
 
 
-            print ("IMU Odometry Publisher")
-            print("Demo: " + fileName)
+                print ("IMU Odometry Publisher")
+                print("Demo: " + fileName)
 
+                
+
+                ########## Reading IMU Data ##########
+                fieldNames= ["field.header.seq", "field.header.stamp", "field.header.frame_id",
+                                "field.linear_acceleration.x", "field.linear_acceleration.y", "field.linear_acceleration.z",
+                                "field.angular_velocity.x", "field.angular_velocity.y", "field.angular_velocity.z"]
+                dataTypes = [int, int, 'U20', float, float, float, float, float, float]
+
+                status, userData = readROSBagCSV(os.path.join(data_dir, fileName+'.csv'), fields=fieldNames, dtype=dataTypes)
+
+                # ros_data = userData.view((float, len(userData.dtype.names)))
+                # ros_data[:,0] = userData['field.header.stamp']
+
+                dataSteps = len(userData['field.header.stamp'])
+                print ("Input data steps: ", dataSteps)
+
+                ########## Generate Path ###########
+                odom = Odometry()
+                x_out = []
+                data = Imu()
             
+                for i in range (dataSteps):
+                    data.header.seq = int(userData['field.header.seq'][i])
+                    data.header.stamp.secs = int(userData['field.header.stamp'][i] * 1e-9)
+                    data.header.stamp.nsecs = int(userData['field.header.stamp'][i] % 1e9)
+                    data.header.frame_id = userData['field.header.frame_id'][i]
+                    data.linear_acceleration.x = userData['field.linear_acceleration.x'][i]
+                    data.linear_acceleration.y = userData['field.linear_acceleration.y'][i]
+                    data.linear_acceleration.z = userData['field.linear_acceleration.z'][i]
+                    data.angular_velocity.x = userData['field.angular_velocity.x'][i]
+                    data.angular_velocity.y = userData['field.angular_velocity.y'][i]
+                    data.angular_velocity.z = userData['field.angular_velocity.z'][i]
 
-            ########## Reading IMU Data ##########
-            fieldNames= ["field.header.seq", "field.header.stamp", "field.header.frame_id",
-                            "field.linear_acceleration.x", "field.linear_acceleration.y", "field.linear_acceleration.z",
-                            "field.angular_velocity.x", "field.angular_velocity.y", "field.angular_velocity.z"]
-            dataTypes = [int, int, 'U20', float, float, float, float, float, float]
+                    # Check shutdown condition
+                    if shutdown:
+                        sys.exit(0)
 
-            status, userData = readROSBagCSV(os.path.join(data_dir, fileName+'.csv'), fields=fieldNames, dtype=dataTypes)
+                    # Estimate Odometry
+                    localizer.update_odometry(data)
+                    printProgressBar(i, dataSteps, 'Progress', 'Complete', length=50)
+                
+                output = np.zeros((len(x_out), 10))
+                output[:,0] = userData['field.header.stamp']   # Time Stamps
 
-            # ros_data = userData.view((float, len(userData.dtype.names)))
-            # ros_data[:,0] = userData['field.header.stamp']
+                # Rotate and generate output
+                for i in range(len(x_out)):
+                    output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
+                    # output[i,1:10] = x_out[i][0]
+                
 
-            dataSteps = len(userData['field.header.stamp'])
-            print ("Input data steps: ", dataSteps)
+                # writeCSV(output, os.path.join(result_dir, fileName+'.csv'), fields=['time', 
+                #                                                     'x_position', 'y_position', 'z_position', 
+                #                                                     'vel_x', 'vel_y', 'vel_z',
+                #                                                     'roll', 'pitch', 'yaw',])
+                show2Dposition(output[:,1:], result_dir+ "/" + fileName)
+                show3Dposition(output[:,1:], result_dir+ "/" + fileName)
 
-            ########## Generate Path ###########
-            odom = Odometry()
-            x_out = []
-            data = Imu()
-        
-            for i in range (dataSteps):
-                data.header.seq = int(userData['field.header.seq'][i])
-                data.header.stamp.secs = int(userData['field.header.stamp'][i] * 1e-9)
-                data.header.stamp.nsecs = int(userData['field.header.stamp'][i] % 1e9)
-                data.header.frame_id = userData['field.header.frame_id'][i]
-                data.linear_acceleration.x = userData['field.linear_acceleration.x'][i]
-                data.linear_acceleration.y = userData['field.linear_acceleration.y'][i]
-                data.linear_acceleration.z = userData['field.linear_acceleration.z'][i]
-                data.angular_velocity.x = userData['field.angular_velocity.x'][i]
-                data.angular_velocity.y = userData['field.angular_velocity.y'][i]
-                data.angular_velocity.z = userData['field.angular_velocity.z'][i]
-
-                # Check shutdown condition
-                if shutdown:
-                    sys.exit(0)
-
-                # Estimate Odometry
-                localizer.update_odometry(data)
-                printProgressBar(i, dataSteps, 'Progress', 'Complete', length=50)
-            
-            output = np.zeros((len(x_out), 10))
-            output[:,0] = userData['field.header.stamp']   # Time Stamps
-
-            # Rotate and generate output
-            for i in range(len(x_out)):
-                output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
-                # output[i,1:10] = x_out[i][0]
-            
-
-            # writeCSV(output, os.path.join(result_dir, fileName+'.csv'), fields=['time', 
-            #                                                     'x_position', 'y_position', 'z_position', 
-            #                                                     'vel_x', 'vel_y', 'vel_z',
-            #                                                     'roll', 'pitch', 'yaw',])
-            show2Dposition(output[:,1:], result_dir+fileName)
-            show3Dposition(output[:,1:])
-
-            rospy.loginfo("Execution Complete")
+                rospy.loginfo("Execution Complete")
 
