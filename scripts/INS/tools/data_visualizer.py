@@ -59,7 +59,7 @@ def show3Dposition(data, fileName = None):
 
     if (fileName != None):
         # Save plot to file
-        plt.savefig(fileName+'.png')
+        plt.savefig(fileName+'_3d.png')
         print ("Visualization plot saved to " + fileName + "_3d.png")
 
     plt.show()

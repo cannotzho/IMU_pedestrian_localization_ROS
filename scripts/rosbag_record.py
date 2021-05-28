@@ -6,6 +6,7 @@ import signal
 import time
 import sys 
 import rospkg
+import os
 
 class RosbagRecord:
     def __init__(self):
