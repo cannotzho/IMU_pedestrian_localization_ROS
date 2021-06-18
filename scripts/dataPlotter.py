@@ -73,11 +73,11 @@ def publish_odom(x, p, header):
 if __name__ == '__main__':
     ########## Parameters ###########
 
-    calibrate_yaw = False
+    calibrate_yaw = True
     calibration_steps = 1
     yaw_pub_method = 'Stable'  # 'Real', 'Zupt', 'Stable'
     yaw_pub_latch = True 
-    directory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2'
+    directory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/2-3JunData/HngzData/JogRun'
 
     ########## Initialization ###########
     signal.signal(signal.SIGINT, signal_handler)
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     localizer = pedestrian_localizer(calibrate_yaw=calibrate_yaw, calibration_distance=calibration_steps, yaw_method=yaw_pub_method, yaw_latch=yaw_pub_latch, callback=publish_odom)
 
     package_path = rospkg.RosPack().get_path('imu_odometry')
-    data_dir = os.path.join(package_path, 'results2')
+    data_dir = os.path.join(package_path, 'results2/2-3JunData/HngzData/JogRun')
     result_dir = os.path.join(package_path, 'results2')
 
     for entry in os.scandir(directory):        
@@ -99,6 +99,7 @@ if __name__ == '__main__':
 
             if ((bagFile.get_message_count() < 1000)):
                 os.remove(bagName)
+                
                 os.remove(entry.path)
             else:
                 fileName = entry.path[len(directory)+1:-4] # CSV file name without extension
@@ -153,8 +154,8 @@ if __name__ == '__main__':
 
                 # Rotate and generate output
                 for i in range(len(x_out)):
-                    output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
-                    # output[i,1:10] = x_out[i][0]
+                    #output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
+                    output[i,1:10] = x_out[i][0]
                 
 
                 # writeCSV(output, os.path.join(result_dir, fileName+'.csv'), fields=['time', 
