@@ -1,3 +1,4 @@
+from math import sqrt
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
@@ -71,7 +72,7 @@ def show3Dposition(data, fileName = None):
     if (fileName != None):
         # Save plot to file
         plt.savefig(fileName+'_3d.png')
-    plt.show()
+    #plt.show()
 
 def show2Dposition(data, fileName=None):
     """ Display 2D visualization of position data.
@@ -87,7 +88,60 @@ def show2Dposition(data, fileName=None):
         plt.savefig(fileName+'.png')
         print ("Visualization plot saved to " + fileName + ".png")
         
-    plt.show()
+    #plt.show()
+
+def findDupes(data):
+
+    pt = data[:,0]
+    px = data[:,1]
+    py = data[:,2]
+
+    px = np.around(px, 2)
+    py = np.around(py, 2)
+
+    pxy = []
+
+    plotList = np.column_stack((pt, px, py))
+
+    for row in plotList:
+        pxy.append((row[1], row[2]))
+
+    seen = {}
+    # dupesTimestampNo = []
+    FIPList = []
+    for (i, x) in enumerate(pxy):
+        if x not in seen:
+            seen[x] = 1
+        else:
+            # if seen[x] == 1:
+            #     dupesTimestampNo.append(i)
+            if i > 999:
+                try:
+                    FIPList.append((x, pxy.index(x, 0, i-400)))
+                except:
+                    pass
+            seen[x] += 1
+    
+    firstDist = 0
+    secondDist = 0
+    try:
+        firstDist = getDist(pxy[0], FIPList[0][0])
+    except:
+        firstDist = "anomalous"
+    try:
+        secondDist = getDist(pxy[-1], FIPList[0][0])
+    except:
+        secondDist = "anomalous"
+
+    return firstDist, secondDist
+    # if (fileName != None):
+    #     # Save plot to file
+    #     plt.savefig(fileName+'.png')
+    #     print ("Visualization plot saved to " + fileName + ".png")
+
+def getDist(coord1, coord2):
+    #Use pythagoras theorem to get distance between two points
+    return sqrt((coord1[0] - coord2[0])**2+(coord1[1] - coord2[1])**2)
 
 def interactive2Dposition_init():
     global figure, lines, ax, xdata, ydata
