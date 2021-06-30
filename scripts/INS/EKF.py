@@ -39,13 +39,13 @@ class Localizer():
         if (self.config['detector'] == "shoe"):
             #### SHOE Detector Thresholds ####
             # G_opt_shoe = 2.5e8
-            G_opt_shoe = 2.5e8 #8e8
-            self.config["G_opt_shoe"] = G_opt_shoe
+            #G_opt_shoe = 2.5e8 #8e8
+            #self.config["G_opt_shoe"] = G_opt_shoe
             self.detector = SHOE(self.config)
 
         if (self.config['detector'] == 'lstm'):
             pass
-            self.detector = LSTM()
+            #self.detector = LSTM()
             #self.detector = self.detector.cuda()
         # TODO if more detectors are added, add respective functions to create suitable detector object
 

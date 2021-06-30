@@ -17,7 +17,7 @@ class pedestrian_localizer():
     STOPPING = 3
     INVALID = 4
 
-    def __init__(self, calibrate_yaw=False, calibration_distance=2, yaw_method='Stable', yaw_latch=True, callback=None):
+    def __init__(self, calibrate_yaw=False, calibration_distance=2, yaw_method='Stable', yaw_latch=True, callback=None, Gval = 2.5e8, Win=5):
         """ Pedestrian Localization system
 
             :param calibrate_yaw: If set to True, initial yaw will be calculated from the first few steps within a fixed displacement
@@ -42,7 +42,7 @@ class pedestrian_localizer():
                                 - Current IMU Reading Header
         """
 
-        self.ins = INS(sigma_a = 0.00098, sigma_w = 8.7266463e-5, detector="lstm", W=5)
+        self.ins = INS(sigma_a = 0.00098, sigma_w = 8.7266463e-5, detector="shoe", W=Win, G_opt_shoe = Gval)
         self.ins.init()
 
         self.callback = callback
@@ -67,7 +67,7 @@ class pedestrian_localizer():
         self.yaw_latch = yaw_latch
         self.human_orientation = np.zeros(3)
 
-    def update_foot_state(self, imu_reading, return_zv=False):
+    def update_foot_state(self, imu_reading, return_zv=False, gCounter = 1):
         """ Estimates IMU odometry and returns current state
 
             :param imu_reading: ROS sensor_msgs.Imu message
@@ -81,10 +81,10 @@ class pedestrian_localizer():
                         True / False
         """
         if return_zv:
-            x, p, zv = self.ins.baseline(imu_reading=imu_reading, return_zv=True)
+            x, p, zv = self.ins.baseline(imu_reading=imu_reading, return_zv=True, G=gCounter * 1e7)
             return x, p, zv
         else:
-            x, p = self.ins.baseline(imu_reading=imu_reading)
+            x, p = self.ins.baseline(imu_reading=imu_reading, G=gCounter * 1e7)
             return x, p
 
     def update_step_count(self, zv, imu_reading):
@@ -258,8 +258,8 @@ class pedestrian_localizer():
         angle = angle + 2 * np.pi * mask
         return angle
 
-    def update_odometry(self, imu_reading, odometry_publisher=None):
-        x, p, zv = self.update_foot_state(imu_reading, return_zv=True)
+    def update_odometry(self, imu_reading, odometry_publisher=None, gCount = 2):
+        x, p, zv = self.update_foot_state(imu_reading, return_zv=True, gCounter = gCount)
         self.update_step_count(zv=zv, imu_reading=imu_reading)
 
         if self.calibrated == False:      

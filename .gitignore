@@ -22,3 +22,9 @@ data/*
 scripts/compare.py
 .vscode/
 
+
+*.png
+
+*.csv
+
+*.bag

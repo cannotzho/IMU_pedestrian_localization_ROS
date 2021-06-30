@@ -4,7 +4,7 @@ from sensor_msgs.msg import Imu as IMU_Msg
 from .EKF import Localizer
 
 class INS():
-    def __init__(self, sigma_a=0.01, sigma_w=0.1*np.pi/180, detector="shoe", W=5, dt=None):
+    def __init__(self, sigma_a=0.01, sigma_w=0.1*np.pi/180, detector="shoe", W=5, dt=None, G_opt_shoe = 2.5e8):
         """ Initialize Inertial Navigation System
         """
         self.config = {
@@ -15,6 +15,8 @@ class INS():
         # "g": 9.8029   # Default
         # "g": 9.775    # Waist IMU
         # "g": 9.575    # Foot IMU
+        self.G_opt_shoe = G_opt_shoe
+        self.config["G_opt_shoe"] = self.G_opt_shoe
 
         sigma_a = self.config["sigma_a"]
         sigma_w = self.config["sigma_w"]
@@ -111,8 +113,8 @@ class INS():
         if (len(imudata) >= 2):
             time = imudata[-1][0] 
             prev_time = imudata[-2][0]
-            dt = time - prev_time    # dt = time difference between last and current readings
-            #dt = 1.0/200            # Hardcode the data rate here. Ex: If sensor rate is 200Hz, dt = 1.0/200
+            #dt = time - prev_time    # dt = time difference between last and current readings
+            dt = 1.0/200            # Hardcode the data rate here. Ex: If sensor rate is 200Hz, dt = 1.0/200
         else:
             # Input data window not sufficient for processing
             if return_zv:
@@ -129,9 +131,9 @@ class INS():
 
         #update state through motion model
         x, q, Rot = self.Localizer.nav_eq(x, x_data, q, dt)
-        F,G = self.Localizer.state_update(x_data, q, dt) 
+        F,Gee = self.Localizer.state_update(x_data, q, dt) 
 
-        P = (F.dot(P)).dot(F.T) + (G.dot(self.Q)).dot(G.T)
+        P = (F.dot(P)).dot(F.T) + (Gee.dot(self.Q)).dot(Gee.T)
         P = (P + P.T)/2 #make symmetric
 
         #corrector
