@@ -87,8 +87,23 @@ def show2Dposition(data, fileName=None):
         # Save plot to file
         plt.savefig(fileName+'.png')
         print ("Visualization plot saved to " + fileName + ".png")
+    plt.clf()
+    # plt.show()
+
+def showZuptvsSequence(data, fileName=None):
+    """ Display 2D visualization of position data.
         
-    #plt.show()
+        :param data: Position data matrix with x,y positions as first 2 columns
+    """
+    px = data[:,0]
+    py = data[:,1]
+    plt.plot(px, py)
+
+    if (fileName != None):
+        # Save plot to file
+        plt.savefig(fileName+'ZuptGraph.png')
+    plt.clf()
+    # plt.show()
 
 def findDupes(data):
 

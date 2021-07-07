@@ -121,8 +121,8 @@ class Localizer():
             :return ZuPT boolean value (True - Zero Velocity)
         """
         zv = self.detector(x_in)
-
+        zuptVal = self.detector.seeZupt(x_in)
         if return_zv:
-            return zv
+            return zv, zuptVal
 
         

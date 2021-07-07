@@ -86,7 +86,7 @@ class INS():
         return self.x_in
 
         
-    def baseline(self, imu_reading, G=5e8, zv=None, return_zv=False):
+    def baseline(self, imu_reading, G=5e8, zv=None, return_zv=False, zuptVal= None):
         """ Estimates IMU odometry and returns current state
 
             :param imu_reading: ROS sensor_msgs.Imu message
@@ -105,10 +105,11 @@ class INS():
         
         if zv is None and len(imudata) == self.W:  
             # Compute the trial's zero-velocity detection using the specified detector
-            zv = self.Localizer.compute_zv_lrt(np.asarray(imudata))
+            zv, zuptVal = self.Localizer.compute_zv_lrt(np.asarray(imudata))
         else:
             # Use a pre-computed zero-velocity estimate provided by arguments
             zv = zv
+            zuptVal = zuptVal
      
         if (len(imudata) >= 2):
             time = imudata[-1][0] 
@@ -118,7 +119,7 @@ class INS():
         else:
             # Input data window not sufficient for processing
             if return_zv:
-                return self.x, self.P, zv
+                return self.x, self.P, zv, zuptVal
             else:
                 return self.x, self.P
 
@@ -149,7 +150,7 @@ class INS():
         self.P = P
 
         if return_zv:
-            return self.x, self.P, zv
+            return self.x, self.P, zv, zuptVal
         else:
             return self.x, self.P
     

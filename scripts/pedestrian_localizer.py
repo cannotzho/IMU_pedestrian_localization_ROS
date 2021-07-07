@@ -81,8 +81,8 @@ class pedestrian_localizer():
                         True / False
         """
         if return_zv:
-            x, p, zv = self.ins.baseline(imu_reading=imu_reading, return_zv=True, G=gCounter * 1e7)
-            return x, p, zv
+            x, p, zv, zuptVal = self.ins.baseline(imu_reading=imu_reading, return_zv=True, G=gCounter * 1e7)
+            return x, p, zv, zuptVal
         else:
             x, p = self.ins.baseline(imu_reading=imu_reading, G=gCounter * 1e7)
             return x, p
@@ -138,7 +138,7 @@ class pedestrian_localizer():
         else: 
             self.step_state = self.INVALID
 
-    def calibrate(self, imu_reading, x, p, zv):
+    def calibrate(self, imu_reading, x, p, zv, zuptVal):
         """  Calculates Roll, Pitch and Yaw initial values
 
             :param imu_reading: IMU reading ros msg
@@ -192,7 +192,7 @@ class pedestrian_localizer():
                 # x_, p, zv_ = self.update_foot_state(reading, return_zv=True)
                 status, x_ = self.update_human_yaw(x, zv)
                 if status and (self.callback is not None):
-                    self.callback(x_, p, reading.header)
+                    self.callback(x_, p, reading.header, zuptVal)
 
             # Calibration complete
             if self.calibrate_yaw:
@@ -259,15 +259,15 @@ class pedestrian_localizer():
         return angle
 
     def update_odometry(self, imu_reading, odometry_publisher=None, gCount = 2):
-        x, p, zv = self.update_foot_state(imu_reading, return_zv=True, gCounter = gCount)
+        x, p, zv, zuptVal = self.update_foot_state(imu_reading, return_zv=True, gCounter = gCount)
         self.update_step_count(zv=zv, imu_reading=imu_reading)
 
         if self.calibrated == False:      
-            self.calibrate(imu_reading, x, p, zv)
+            self.calibrate(imu_reading, x, p, zv, zuptVal)
         else:
             status, x = self.update_human_yaw(x, zv)
             if status and (self.callback is not None):
-                self.callback(x, p, imu_reading.header)
+                self.callback(x, p, imu_reading.header, zuptVal)
         
 
     

@@ -5,6 +5,7 @@
 # sudo pip3 install rospkg catkin_pkg
 
 import os
+from INS.tools.data_visualizer import showZuptvsSequence
 from INS.tools.data_visualizer import findDupes
 
 # Constrain OPENBLAS Multithreading (To solve Numpy Performance Issues)
@@ -42,7 +43,7 @@ def signal_handler(sig, frame):
     shutdown = True
     sys.exit(0)
 
-def publish_odom(x, p, header):
+def publish_odom(x, p, header, zuptVal):
     """ Publish Odometry Message
 
         :param x: State
@@ -52,6 +53,10 @@ def publish_odom(x, p, header):
 
     """
     global x_out
+    global zupt_out
+    #Adding zupt information as part of the callback function
+    if zuptVal is not None:
+        zupt_out.append([zuptVal])
     if x is not None:
         x_out.append([x, header])
 
@@ -80,12 +85,12 @@ if __name__ == '__main__':
     calibration_distance = 2
     yaw_pub_method = 'Stable'  # 'Real', 'Zupt', 'Stable'
     yaw_pub_latch = True 
-    directory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/2-3JunData'
+    directory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/gCalTest'
 
-    gLowest = 5
-    gHighest = 25
+    gLowest = 10
+    gHighest = 11
     wLowest = 5
-    wHighest = 15
+    wHighest = 16
     ########## Initialization ###########
     signal.signal(signal.SIGINT, signal_handler)
     if ros_enabled:
@@ -96,9 +101,14 @@ if __name__ == '__main__':
     #Create csv file with raw results for processing
     csvHeader = ["file_name", "g_value", "window_size", "first_dist", "second_dist"]
     datasetLabel = "2-3Jun"
-    with open(f"/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/csvResults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'x', encoding='UTF8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(csvHeader)
+    try:
+        with open(f"{directory}/csvresults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'x', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(csvHeader)
+    except:
+        with open(f"{directory}/csvresults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'w', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(csvHeader)
 
     #iterate for each g value and window size
     
@@ -106,8 +116,8 @@ if __name__ == '__main__':
         for window in range (wLowest, wHighest):
             localizer = pedestrian_localizer(calibrate_yaw=calibrate_yaw, calibration_distance=calibration_distance, yaw_method=yaw_pub_method, yaw_latch=yaw_pub_latch, callback=publish_odom, Gval = gCounter * 1e7, Win=window)
             package_path = rospkg.RosPack().get_path('imu_odometry')
-            data_dir = os.path.join(package_path, 'results2/2-3JunData')
-            result_dir = os.path.join(package_path, 'results2/windowTesting/Gval{0}e7Wsize{1}'.format(gCounter, window))
+            data_dir = os.path.join(package_path, 'results2/gCalTest')
+            result_dir = os.path.join(package_path, 'results2/gCalTest/Gval{0}e7Wsize{1}'.format(gCounter, window))
             resPath = Path(result_dir)
 
             if not resPath.exists():
@@ -124,8 +134,8 @@ if __name__ == '__main__':
                     bagFile = rosbag.Bag(bagName)
 
                     if ((bagFile.get_message_count() < 1000)):
-                        os.remove(bagName)
                         
+                        os.remove(bagName)
                         os.remove(entry.path)
                     else:
                         fileName = entry.path[len(directory)+1:-4] # CSV file name without extension
@@ -153,6 +163,7 @@ if __name__ == '__main__':
                         ########## Generate Path ###########
                         odom = Odometry()
                         x_out = []
+                        zupt_out = []
                         data = Imu()
                     
                         for i in range (dataSteps):
@@ -178,6 +189,14 @@ if __name__ == '__main__':
                         output = np.zeros((len(x_out), 10))
                         #output[:,0] = userData['field.header.stamp']   # Time Stamps
 
+                        #create zupt output for plotting
+                        zOUT = np.zeros((len(zupt_out), 2))
+                        for i in range(len(zupt_out)):
+                            #output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
+                            zOUT[i,1] = zupt_out[i][0]
+                            zOUT[i,0] = i
+
+
                         # Rotate and generate output
                         for i in range(len(x_out)):
                             #output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
@@ -195,16 +214,17 @@ if __name__ == '__main__':
                         # plt.clf()
 
                         show2Dposition(output[:,1:], result_dir+ "/" + fileName)
-
-                        distList = findDupes(output[:, :])
+                        showZuptvsSequence(zOUT, result_dir+ "/" + fileName)
                         #write row to resulting csv
+                        distList = findDupes(output[:, :])
+                        
                         newRow = [fileName, gCounter, window, distList[0], distList[1]]
-                        with open(f"/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/csvResults/{datasetLabel}.csv", 'a', encoding='UTF8', newline='') as f:
+                        with open(f"/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/csvResults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'a', encoding='UTF8', newline='') as f:
                             writer = csv.writer(f)
                             writer.writerow(newRow)
 
                         
                         
-                        
+                        # rospy.loginfo(zOUT)
                         rospy.loginfo("Execution Complete")
 
