@@ -101,7 +101,7 @@ def showZuptvsSequence(data, fileName=None):
 
     if (fileName != None):
         # Save plot to file
-        plt.savefig(fileName+'ZuptGraph.png')
+        plt.savefig(fileName+'gsinGraph.png')
     plt.clf()
     # plt.show()
 
@@ -110,16 +110,125 @@ def findDupes(data):
     pt = data[:,0]
     px = data[:,1]
     py = data[:,2]
+    pz = data[:,3]
 
     px = np.around(px, 2)
     py = np.around(py, 2)
+    pz = np.around(pz, 2)
+
+    pxyz = []
+
+    plotList = np.column_stack((pt, px, py, pz))
+
+    for row in plotList:
+        pxyz.append((row[1], row[2], row[3]))
+
+    seen = {}
+    # dupesTimestampNo = []
+    FIPList = {}
+    for (i, x) in enumerate(pxyz):
+        xyCoord = (x[0], x[1])
+        if xyCoord not in seen:
+            seen[xyCoord] = 1
+        else:
+            # if seen[x] == 1:
+            #     dupesTimestampNo.append(i)
+            try:
+                FIPList.add((x, pxyz.index(x, 0, i-400)))
+            except:
+                pass
+            seen[xyCoord] += 1
+    
+    firstDist = 0
+    secondDist = 0
+    try:
+        firstDist = get3dDist(pxyz[0], FIPList.pop())
+    except:
+        firstDist = "anomalous"
+    try:
+        secondDist = get3dDist(pxyz[-1], FIPList.pop())
+    except:
+        secondDist = "anomalous"
+
+    return firstDist, secondDist
+    # if (fileName != None):
+    #     # Save plot to file
+    #     plt.savefig(fileName+'.png')
+    #     print ("Visualization plot saved to " + fileName + ".png")
+
+def findDupes2d(data):
+
+    pt = data[:,0]
+    px = data[:,1]
+    py = data[:,2]
+    pz = data[:,3]
+
+    px = np.around(px, 2)
+    py = np.around(py, 2)
+    pz = np.around(pz, 2)
+
+    pxyz = []
+
+    plotList = np.column_stack((pt, px, py, pz))
+
+    for row in plotList:
+        pxyz.append((row[1], row[2], row[3]))
+
+    seen = {}
+    # dupesTimestampNo = []
+    FIPList = []
+    for (i, x) in enumerate(pxyz):
+        xy = (x[0], x[1])
+        if xy not in seen:
+            seen[xy] = 1
+        else:
+            # if seen[x] == 1:
+            #     dupesTimestampNo.append(i)
+            if i > 999:
+                try:
+                    FIPList.append(((x[0], x[1]), pxyz.index(x, 0, i-400)))
+                except:
+                    pass
+            seen[xy] += 1
+    
+    firstDist = 0
+    secondDist = 0
+    # try:
+    initialReading = pxyz[0]
+    firstDist = getDist((initialReading[0], initialReading[1]), FIPList[0][0])
+    # except:
+    #     firstDist = "anomalous"
+    # try:
+    lastReading = pxyz[-1]
+    secondDist = getDist((lastReading[0], lastReading[1]), FIPList[0][0])
+    # except:
+    #     secondDist = "anomalous"
+
+    return firstDist, secondDist
+    # if (fileName != None):
+    #     # Save plot to file
+    #     plt.savefig(fileName+'.png')
+    #     print ("Visualization plot saved to " + fileName + ".png")
+
+def findDupes3d(data):
+
+    pt = data[:,0]
+    px = data[:,1]
+    py = data[:,2]
+    pz = data[:,3]
+
+    px = np.around(px, 2)
+    py = np.around(py, 2)
+    pz = np.around(pz, 2)
 
     pxy = []
+    pxyz = []
 
-    plotList = np.column_stack((pt, px, py))
+    plotList = np.column_stack((pt, px, py, pz))
 
     for row in plotList:
         pxy.append((row[1], row[2]))
+        pxyz.append((row[1], row[2], row[3]))
 
     seen = {}
     # dupesTimestampNo = []
@@ -132,7 +241,7 @@ def findDupes(data):
             #     dupesTimestampNo.append(i)
             if i > 999:
                 try:
-                    FIPList.append((x, pxy.index(x, 0, i-400)))
+                    FIPList.append(pxy.index(x, 0, i-400))
                 except:
                     pass
             seen[x] += 1
@@ -140,23 +249,63 @@ def findDupes(data):
     firstDist = 0
     secondDist = 0
     try:
-        firstDist = getDist(pxy[0], FIPList[0][0])
+        intersection = pxyz[FIPList[0]]
+
+        initialReading = pxyz[0]
+        firstDist = get3dDist(initialReading, intersection)
+
+        lastReading = pxyz[-1]
+        secondDist = get3dDist(lastReading, intersection)
+
     except:
         firstDist = "anomalous"
-    try:
-        secondDist = getDist(pxy[-1], FIPList[0][0])
-    except:
         secondDist = "anomalous"
+        
 
     return firstDist, secondDist
-    # if (fileName != None):
-    #     # Save plot to file
-    #     plt.savefig(fileName+'.png')
-    #     print ("Visualization plot saved to " + fileName + ".png")
+
+def findDupesTest(data):
+
+    pt = data[:,0]
+    px = data[:,1]
+    py = data[:,2]
+    pz = data[:,3]
+
+    px = np.around(px, 2)
+    py = np.around(py, 2)
+    pz = np.around(pz, 2)
+
+    pxyz = []
+
+    plotList = np.column_stack((pt, px, py, pz))
+
+    for row in plotList:
+        pxyz.append((row[1], row[2], row[3]))
+
+    seen = {}
+    # dupesTimestampNo = []
+    FIPList = {}
+    for (i, x) in enumerate(pxyz):
+        xyCoord = (x[0], x[1])
+        if xyCoord not in seen:
+            seen[xyCoord] = 1
+        else:
+            # if seen[x] == 1:
+            #     dupesTimestampNo.append(i)
+            try:
+                FIPList.add((x))
+            except:
+                pass
+            seen[xyCoord] += 1
+    return(FIPList)
+    
 
 def getDist(coord1, coord2):
     #Use pythagoras theorem to get distance between two points
     return sqrt((coord1[0] - coord2[0])**2+(coord1[1] - coord2[1])**2)
+
+def get3dDist(coord1, coord2):
+    return sqrt((coord1[0] - coord2[0])**2+(coord1[1] - coord2[1])**2 + (coord1[2] - coord2[2])**2)
 
 def interactive2Dposition_init():
     global figure, lines, ax, xdata, ydata

@@ -5,7 +5,7 @@
 # sudo pip3 install rospkg catkin_pkg
 
 import os
-from INS.tools.data_visualizer import showZuptvsSequence
+from INS.tools.data_visualizer import findDupes2d, findDupes3d, findDupesTest, showZuptvsSequence
 from INS.tools.data_visualizer import findDupes
 
 # Constrain OPENBLAS Multithreading (To solve Numpy Performance Issues)
@@ -85,10 +85,11 @@ if __name__ == '__main__':
     calibration_distance = 2
     yaw_pub_method = 'Stable'  # 'Real', 'Zupt', 'Stable'
     yaw_pub_latch = True 
-    directory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/gCalTest'
+    directory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/all4datasets'
+    csvDirectory = '/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/csvResults'
 
-    gLowest = 10
-    gHighest = 11
+    gLowest = 5
+    gHighest = 31
     wLowest = 5
     wHighest = 16
     ########## Initialization ###########
@@ -100,15 +101,11 @@ if __name__ == '__main__':
     
     #Create csv file with raw results for processing
     csvHeader = ["file_name", "g_value", "window_size", "first_dist", "second_dist"]
-    datasetLabel = "2-3Jun"
-    try:
-        with open(f"{directory}/csvresults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'x', encoding='UTF8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(csvHeader)
-    except:
-        with open(f"{directory}/csvresults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'w', encoding='UTF8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(csvHeader)
+    datasetLabel = "all4datasets"
+    
+    with open(f"{csvDirectory}/{datasetLabel} with 3d change and gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(csvHeader)
 
     #iterate for each g value and window size
     
@@ -116,8 +113,8 @@ if __name__ == '__main__':
         for window in range (wLowest, wHighest):
             localizer = pedestrian_localizer(calibrate_yaw=calibrate_yaw, calibration_distance=calibration_distance, yaw_method=yaw_pub_method, yaw_latch=yaw_pub_latch, callback=publish_odom, Gval = gCounter * 1e7, Win=window)
             package_path = rospkg.RosPack().get_path('imu_odometry')
-            data_dir = os.path.join(package_path, 'results2/gCalTest')
-            result_dir = os.path.join(package_path, 'results2/gCalTest/Gval{0}e7Wsize{1}'.format(gCounter, window))
+            data_dir = os.path.join(package_path, f'results2/{datasetLabel}')
+            result_dir = os.path.join(package_path, f'results2/{datasetLabel}/Gval{gCounter}e7Wsize{window}')
             resPath = Path(result_dir)
 
             if not resPath.exists():
@@ -190,11 +187,11 @@ if __name__ == '__main__':
                         #output[:,0] = userData['field.header.stamp']   # Time Stamps
 
                         #create zupt output for plotting
-                        zOUT = np.zeros((len(zupt_out), 2))
-                        for i in range(len(zupt_out)):
-                            #output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
-                            zOUT[i,1] = zupt_out[i][0]
-                            zOUT[i,0] = i
+                        # zOUT = np.zeros((len(zupt_out), 2))
+                        # for i in range(len(zupt_out)):
+                        #     #output[i,1:10] = rotateOutput(x_out[i][0], roll=math.pi, pitch=0, yaw=0)
+                        #     zOUT[i,1] = zupt_out[i][0]
+                        #     zOUT[i,0] = i
 
 
                         # Rotate and generate output
@@ -213,13 +210,13 @@ if __name__ == '__main__':
                         # show3Dposition(output[:,1:], result_dir+ "/" + fileName)
                         # plt.clf()
 
-                        show2Dposition(output[:,1:], result_dir+ "/" + fileName)
-                        showZuptvsSequence(zOUT, result_dir+ "/" + fileName)
+                        # show2Dposition(output[:,1:], result_dir+ "/" + fileName)
+                        # showZuptvsSequence(zOUT, result_dir+ "/" + fileName)
                         #write row to resulting csv
-                        distList = findDupes(output[:, :])
-                        
+                        distList = findDupes3d(output[:, :])
+                        # rospy.loginfo(findDupes2dTemp(output[:,:]))
                         newRow = [fileName, gCounter, window, distList[0], distList[1]]
-                        with open(f"/home/sutd/catkin_ws/src/IMU_pedestrian_localization_ROS/results2/csvResults/{datasetLabel} with gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'a', encoding='UTF8', newline='') as f:
+                        with open(f"{csvDirectory}/{datasetLabel} with 3d change and gRange from {gLowest} to {gHighest} and windowRange from {wLowest} to {wHighest}.csv", 'a', encoding='UTF8', newline='') as f:
                             writer = csv.writer(f)
                             writer.writerow(newRow)
 
